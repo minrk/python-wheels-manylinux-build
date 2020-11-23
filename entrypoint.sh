@@ -39,7 +39,15 @@ for PY_VER in "${arrPY_VERSIONS[@]}"; do
 done
 
 # Bundle external shared libraries into the wheels
-find . -type f -iname "*-linux*.whl" -execdir sh -c "auditwheel repair '{}' -w ./ --plat '${PLAT}' || { echo 'Repairing wheels failed.'; auditwheel show '{}'; exit 1; }" \;
+# find -exec does not preserve failed exit codes, so use an output file for failures
+rm -f ./failed-wheels
+find . -type f -iname "*-linux*.whl" -execdir sh -c "$(which auditwheel) repair '{}' -w ./ --plat '${PLAT}' || { echo 'Repairing wheels failed.'; auditwheel show '{}' >> failed-wheels; }" \;
+
+if [[ -f ./failed-wheels ]]; then
+    echo "Repairing wheels failed:"
+    cat failed-wheels
+    exit 1
+fi
 
 echo "Succesfully build wheels:"
 find . -type f -iname "*-manylinux*.whl"
